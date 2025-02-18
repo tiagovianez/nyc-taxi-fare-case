@@ -4,7 +4,6 @@ import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.streaming.Trigger
-import scala.util.{Try, Success, Failure}
 import java.util.Properties
 
 object KafkaTaxiProducer {
@@ -38,7 +37,10 @@ object KafkaTaxiProducer {
       .schema(taxiSchema)
       .csv("s3a://nyc-taxi-fare-prediction/data/train.csv")
 
-    // ✅ 2. Prepare Kafka messages
+
+    val kafkaBrokers = "localhost:9092" // Em vez de "nyc-taxi-case-kafka-1:9092"
+
+    // ✅ 3. Prepare Kafka messages
     val kafkaMessages = df.select(
       col("key").cast(StringType).as("key"),
       to_json(struct(
@@ -52,14 +54,14 @@ object KafkaTaxiProducer {
       )).as("value")
     ).filter(col("value").isNotNull) // Basic validation
 
-    // ✅ 3. Simulate chunked streaming
+    // ✅ 4. Simulate chunked streaming
     val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(1.0)) // 10 chunks
 
     chunkedDFs.foreach { chunk =>
       if (!chunk.isEmpty) {
         chunk.write
           .format("kafka")
-          .option("kafka.bootstrap.servers", "kafka:9092")
+          .option("kafka.bootstrap.servers", kafkaBrokers)
           .option("topic", "nyc-taxi-rides")
           .save()
 
