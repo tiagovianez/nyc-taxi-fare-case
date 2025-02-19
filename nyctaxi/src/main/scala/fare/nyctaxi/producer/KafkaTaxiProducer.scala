@@ -5,17 +5,23 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.streaming.Trigger
 import java.util.Properties
+import org.apache.log4j.{Level, Logger}
 
 object KafkaTaxiProducer {
 
   def main(args: Array[String]): Unit = {
+
+    val log4jConfigPath = "src/main/resources/log4j.properties"
+    System.setProperty("log4j.configuration", log4jConfigPath)
+
+    // Reduce more logs at console
+    Logger.getLogger("org").setLevel(Level.WARN)
+    Logger.getLogger("akka").setLevel(Level.WARN)
+    Logger.getLogger("kafka").setLevel(Level.WARN)
+
     val spark = SparkSession.builder()
       .appName("NYC Taxi Rides Kafka Producer")
       .master("local[*]")
-      .config("spark.hadoop.fs.s3a.access.key", sys.env.getOrElse("AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY"))
-      .config("spark.hadoop.fs.s3a.secret.key", sys.env.getOrElse("AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY"))
-      .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
-      .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
       .getOrCreate()
 
     import spark.implicits._
@@ -35,37 +41,38 @@ object KafkaTaxiProducer {
     val df = spark.read
       .option("header", "true")
       .schema(taxiSchema)
-      .csv("s3a://nyc-taxi-fare-prediction/data/train.csv")
+      .csv("/home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/train.csv")
 
 
     val kafkaBrokers = "localhost:9092" // Em vez de "nyc-taxi-case-kafka-1:9092"
 
     // ✅ 3. Prepare Kafka messages
     val kafkaMessages = df.select(
-      col("key").cast(StringType).as("key"),
+      col("key").cast(StringType).alias("key"),  // ✅ Mantém a key como string
       to_json(struct(
-        col("fare_amount").cast(DoubleType),
-        col("pickup_datetime").cast(TimestampType),
-        col("pickup_longitude").cast(DoubleType),
-        col("pickup_latitude").cast(DoubleType),
-        col("dropoff_longitude").cast(DoubleType),
-        col("dropoff_latitude").cast(DoubleType),
-        col("passenger_count").cast(IntegerType)
-      )).as("value")
-    ).filter(col("value").isNotNull) // Basic validation
+        col("fare_amount").cast(DoubleType).alias("fare_amount"),
+        col("pickup_datetime").cast(TimestampType).alias("pickup_datetime"),
+        col("pickup_longitude").cast(DoubleType).alias("pickup_longitude"),
+        col("pickup_latitude").cast(DoubleType).alias("pickup_latitude"),
+        col("dropoff_longitude").cast(DoubleType).alias("dropoff_longitude"),
+        col("dropoff_latitude").cast(DoubleType).alias("dropoff_latitude"),
+        col("passenger_count").cast(IntegerType).alias("passenger_count")
+      )).alias("value") // ✅ O JSON vai como value no Kafka
+    )
 
-    // ✅ 4. Simulate chunked streaming
+    // 🔥 Certifique-se de definir chunkedDFs antes de usar
     val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(1.0)) // 10 chunks
 
     chunkedDFs.foreach { chunk =>
       if (!chunk.isEmpty) {
-        chunk.write
+        chunk.selectExpr("CAST(key AS STRING)", "value") // ✅ Explicita a key antes de salvar
+          .write
           .format("kafka")
           .option("kafka.bootstrap.servers", kafkaBrokers)
           .option("topic", "nyc-taxi-rides")
           .save()
 
-        Thread.sleep(1000) // Simulate delay between chunks
+        Thread.sleep(1000) // Simula delay entre os batches
       }
     }
 
