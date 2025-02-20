@@ -19,6 +19,9 @@ object KafkaTaxiProducer {
     Logger.getLogger("akka").setLevel(Level.WARN)
     Logger.getLogger("kafka").setLevel(Level.WARN)
 
+    val kafkaBroker = "localhost:9092"
+    val kafkaTopic = "nyc-taxi-rides"
+
     val spark = SparkSession.builder()
       .appName("NYC Taxi Rides Kafka Producer")
       .master("local[*]")
@@ -44,8 +47,6 @@ object KafkaTaxiProducer {
       .csv("/home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/train.csv")
 
 
-    val kafkaBrokers = "localhost:9092" // Em vez de "nyc-taxi-case-kafka-1:9092"
-
     // ✅ 3. Prepare Kafka messages
     val kafkaMessages = df.select(
       col("key").cast(StringType).alias("key"),  // ✅ Mantém a key como string
@@ -60,7 +61,7 @@ object KafkaTaxiProducer {
       )).alias("value") // ✅ O JSON vai como value no Kafka
     )
 
-    // 🔥 Certifique-se de definir chunkedDFs antes de usar
+
     val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(1.0)) // 10 chunks
 
     chunkedDFs.foreach { chunk =>
@@ -68,7 +69,7 @@ object KafkaTaxiProducer {
         chunk.selectExpr("CAST(key AS STRING)", "value") // ✅ Explicita a key antes de salvar
           .write
           .format("kafka")
-          .option("kafka.bootstrap.servers", kafkaBrokers)
+          .option("kafka.bootstrap.servers", kafkaBroker)
           .option("topic", "nyc-taxi-rides")
           .save()
 

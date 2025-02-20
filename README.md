@@ -10,3 +10,13 @@
 ## Comandos de execução e validação
 - Para executar o producer: **sbt "runMain fare.nyctaxi.producer.KafkaTaxiProducer"**
 - Para executar o consumer: **sbt "runMain fare.nyctaxi.consumer.TaxiConsumer"**
+
+
+## 📌 Como fica a estrutura no Data Lake?
+![img.png](img.png)
+
+## 🚀 Vantagens dessa abordagem
+✅ Consultas rápidas → Spark lê apenas os arquivos necessários
+✅ Menos armazenamento desperdiçado → Evita pequenos arquivos dispersos
+✅ Escalabilidade → Aguenta grandes volumes de dados sem travar
+✅ Integração com batch e NRT → Pode rodar queries analíticas e streaming
