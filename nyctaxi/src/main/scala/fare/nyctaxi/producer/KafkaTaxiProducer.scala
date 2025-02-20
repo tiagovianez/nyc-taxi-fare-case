@@ -24,7 +24,7 @@ object KafkaTaxiProducer {
 
     val spark = SparkSession.builder()
       .appName("NYC Taxi Rides Kafka Producer")
-      .master("local[*]")
+      .master("local[3]")
       .getOrCreate()
 
     import spark.implicits._

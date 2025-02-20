@@ -30,7 +30,7 @@ object TaxiConsumer {
 
     val spark = SparkSession.builder
       .appName("TaxiStreamProcessor")
-      .config("spark.master", "local[*]")
+      .config("spark.master", "local[3]")
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
       .getOrCreate()
