@@ -7,7 +7,7 @@ import org.apache.spark.sql.streaming.Trigger
 import java.util.Properties
 import org.apache.log4j.{Level, Logger}
 
-object KafkaTaxiProducer {
+object ProducerJob {
 
   def main(args: Array[String]): Unit = {
 
@@ -62,7 +62,7 @@ object KafkaTaxiProducer {
     )
 
 
-    val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(1.0)) // 10 chunks
+    val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(0.01)) // 10 chunks
 
     chunkedDFs.foreach { chunk =>
       if (!chunk.isEmpty) {
@@ -73,7 +73,7 @@ object KafkaTaxiProducer {
           .option("topic", "nyc-taxi-rides")
           .save()
 
-        Thread.sleep(1000) // Simula delay entre os batches
+        Thread.sleep(10000) // Simula delay entre os batches
       }
     }
 
