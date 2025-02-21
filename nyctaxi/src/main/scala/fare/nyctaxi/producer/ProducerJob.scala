@@ -6,20 +6,17 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.streaming.Trigger
 import java.util.Properties
 import org.apache.log4j.{Level, Logger}
+import fare.nyctaxi.Constants
+
 
 object ProducerJob {
-
   def main(args: Array[String]): Unit = {
 
-    val log4jConfigPath = "src/main/resources/log4j.properties"
-    System.setProperty("log4j.configuration", log4jConfigPath)
+    System.setProperty("log4j.configuration", Constants.log4jConfigPath)
 
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
     Logger.getLogger("kafka").setLevel(Level.WARN)
-
-    val kafkaBroker = "localhost:9092"
-    val kafkaTopic = "nyc-taxi-rides"
 
     val spark = SparkSession.builder()
       .appName("NYC Taxi Rides Kafka Producer")
@@ -42,7 +39,7 @@ object ProducerJob {
     val df = spark.read
       .option("header", "true")
       .schema(taxiSchema)
-      .csv("/home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/train.csv")
+      .csv(Constants.SOURCE_DATA_PATH)
 
     val kafkaMessages = df.select(
       col("key").cast(StringType).alias("key"),
@@ -64,8 +61,8 @@ object ProducerJob {
         chunk.selectExpr("CAST(key AS STRING)", "value")
           .write
           .format("kafka")
-          .option("kafka.bootstrap.servers", kafkaBroker)
-          .option("topic", "nyc-taxi-rides")
+          .option("kafka.bootstrap.servers", Constants.kafkaBroker)
+          .option("topic", Constants.kafkaTopic)
           .save()
 
         Thread.sleep(10000)
