@@ -21,13 +21,14 @@ services:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
       - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - ALLOW_PLAINTEXT_LISTENER=yes
 
   postgres:
     image: postgres:13
+    container_name: postgres
     restart: always
     environment:
       POSTGRES_USER: airflow
@@ -45,6 +46,7 @@ services:
   airflow:
       build:
         context: ./docker/airflow  # Path to the new Dockerfile
+      container_name: airflow
       depends_on:
         postgres:
           condition: service_healthy
@@ -59,6 +61,7 @@ services:
 
   airflow-scheduler:
       image: apache/airflow:2.5.1
+      container_name: airflow-scheduler
       depends_on:
         - postgres
         - airflow
