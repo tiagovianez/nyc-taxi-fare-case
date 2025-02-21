@@ -37,3 +37,20 @@
 **airflow db upgrade** → Atualiza o banco de dados.
 **airflow users create** ... → Cria um usuário administrador.
 **airflow scheduler** & **airflow webserver** → Inicia os serviços do Airflow.
+**docker logs -f nyc-taxi-fare-case-airflow-1** -> Verifica as logs do airflow
+
+
+## Comandos do docker
+**docker volume ls** -> Verifica se ainda tem volume ativo
+**docker volume rm <service_data>** -> remove manualmente o volume do serviço
+
+
+
+
+## SBT configurações:
+
+1. Configurar SBT_OPTS para aumentar a memória
+
+Antes de rodar o sbt assembly, execute o seguinte comando no terminal para aumentar a memória disponível:
+
+export SBT_OPTS="-Xms2G -Xmx4G -XX:MaxMetaspaceSize=1G -XX:+UseG1GC"
