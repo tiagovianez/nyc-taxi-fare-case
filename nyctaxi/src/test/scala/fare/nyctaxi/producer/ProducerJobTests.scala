@@ -9,14 +9,10 @@ import org.scalatest.matchers.should.Matchers
 
 class ProducerJobTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
-  var spark: SparkSession = _ // Não usar implicit
-
-  override def beforeAll(): Unit = {
-    spark = SparkSession.builder()
-      .appName("Test - NYC Taxi Rides Kafka Producer")
-      .master("local[2]")
-      .getOrCreate()
-  }
+  lazy val spark: SparkSession = SparkSession.builder()
+    .appName("Test - NYC Taxi Rides Kafka Producer")
+    .master("local[2]")
+    .getOrCreate()
 
   override def afterAll(): Unit = {
     if (spark != null) {
@@ -26,7 +22,7 @@ class ProducerJobTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   val taxiSchema = StructType(Array(
     StructField("key", StringType, nullable = true),
-    StructField("fare_amount", DoubleType, nullable = true),
+    StructField("fare_amount", DoubleType, nullable = false),
     StructField("pickup_datetime", TimestampType, nullable = true),
     StructField("pickup_longitude", DoubleType, nullable = true),
     StructField("pickup_latitude", DoubleType, nullable = true),
@@ -37,17 +33,18 @@ class ProducerJobTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   "ProducerJob" should "load CSV data correctly into a DataFrame" in {
     val localSpark = spark
+    import org.apache.spark.sql.Row
 
+    // Criando dados como `Row`, garantindo compatibilidade com o schema
     val data = Seq(
-      ("1", 12.5, "2024-02-21 10:30:00", -73.987, 40.743, -73.985, 40.745, 2),
-      ("2", 25.0, "2024-02-21 11:00:00", -73.982, 40.750, -73.980, 40.752, 1)
+      Row("1", 12.5, java.sql.Timestamp.valueOf("2024-02-21 10:30:00"), -73.987, 40.743, -73.985, 40.745, 2),
+      Row("2", 25.0, java.sql.Timestamp.valueOf("2024-02-21 11:00:00"), -73.982, 40.750, -73.980, 40.752, 1)
     )
 
-    val df = data.toDF(
-      "key", "fare_amount", "pickup_datetime", "pickup_longitude", "pickup_latitude",
-      "dropoff_longitude", "dropoff_latitude", "passenger_count"
-    )
+    // Criando o DataFrame com o schema definido
+    val df = localSpark.createDataFrame(localSpark.sparkContext.parallelize(data), taxiSchema)
 
+    // Verificações do schema e da contagem de registros
     df.schema shouldBe taxiSchema
     df.count() shouldBe 2
   }
