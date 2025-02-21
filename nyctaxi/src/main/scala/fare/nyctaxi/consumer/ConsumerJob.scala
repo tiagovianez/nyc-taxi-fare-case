@@ -8,6 +8,7 @@ import org.apache.log4j.{Level, Logger}
 import io.delta.tables._
 import fare.nyctaxi.Constants
 
+
 object ConsumerJob {
   def main(args: Array[String]): Unit = {
 
