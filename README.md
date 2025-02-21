@@ -20,3 +20,20 @@
 ✅ Menos armazenamento desperdiçado → Evita pequenos arquivos dispersos
 ✅ Escalabilidade → Aguenta grandes volumes de dados sem travar
 ✅ Integração com batch e NRT → Pode rodar queries analíticas e streaming
+
+
+
+
+## Analysys memory
+
+### amout of data stored in the raw: 354.8MB
+### amount of data stored in the curated: 457.8MB
+
+
+
+## Airfllow comandos
+🔹 Comandos Airflow
+
+**airflow db upgrade** → Atualiza o banco de dados.
+**airflow users create** ... → Cria um usuário administrador.
+**airflow scheduler** & **airflow webserver** → Inicia os serviços do Airflow.
