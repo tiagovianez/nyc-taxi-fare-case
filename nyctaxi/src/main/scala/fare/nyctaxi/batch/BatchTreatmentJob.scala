@@ -9,6 +9,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.log4j.{Level, Logger}
 import fare.nyctaxi.Constants
 
+
 object BatchTreatmentJob {
   def main(args: Array[String]): Unit = {
 
