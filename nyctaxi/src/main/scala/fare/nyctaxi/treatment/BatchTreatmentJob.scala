@@ -21,17 +21,17 @@ object BatchTreatmentJob {
     // 🚀 Inicializa a sessão do Spark
     val spark = SparkSession.builder()
       .appName("BatchTransformationJob")
-      .config("spark.master", "local[6]")  // Usa 6 threads para paralelismo
+      .config("spark.master", "local[*]")
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-      .config("spark.executor.memory", "14g")  // Mantendo 6GB livres para o SO
-      .config("spark.driver.memory", "10g")  // Evita que o driver fique sem memória
+      .config("spark.executor.memory", "5g")
+      .config("spark.driver.memory", "5g")
       .config("spark.sql.shuffle.partitions", "32")
-      .config("spark.default.parallelism", "32")  // Melhor distribuição de tarefas
-      .config("spark.sql.files.maxPartitionBytes", "64MB")  // Evita partições muito pequenas
-      .config("spark.sql.adaptive.enabled", "true")  // 🔥 Adaptive Query Execution para ajuste dinâmico
-      .config("spark.sql.adaptive.coalescePartitions.enabled", "true")  // 🔥 Reduz partições pequenas
-      .config("spark.sql.adaptive.coalescePartitions.minPartitionSize", "64MB")  // 🔥 Partições maiores = menos shuffle
+      .config("spark.default.parallelism", "32")
+      .config("spark.sql.files.maxPartitionBytes", "64MB")
+      .config("spark.sql.adaptive.enabled", "true")
+      .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+      .config("spark.sql.adaptive.coalescePartitions.minPartitionSize", "64MB")
       .getOrCreate()
 
     import spark.implicits._
@@ -113,8 +113,8 @@ object BatchTreatmentJob {
     cleanedDF
       .coalesce(16)  // 🔥 Reduz o shuffle e melhora escrita
       .write
-      .format("parquet")
-      .mode("overwrite")
+      .format("delta")
+      .mode("append")
       .partitionBy("year", "month", "day", "pickup_region")
       .save(Constants.CURATED_PARQUET_PATH)
 
