@@ -14,7 +14,6 @@ object ProducerJob {
     val log4jConfigPath = "src/main/resources/log4j.properties"
     System.setProperty("log4j.configuration", log4jConfigPath)
 
-    // Reduce more logs at console
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
     Logger.getLogger("kafka").setLevel(Level.WARN)
@@ -29,7 +28,6 @@ object ProducerJob {
 
     import spark.implicits._
 
-    // ✅ 1. Load CSV from S3 with explicit schema
     val taxiSchema = StructType(Array(
       StructField("key", StringType, nullable = true),
       StructField("fare_amount", DoubleType, nullable = true),
@@ -46,10 +44,8 @@ object ProducerJob {
       .schema(taxiSchema)
       .csv("/home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/train.csv")
 
-
-    // ✅ 3. Prepare Kafka messages
     val kafkaMessages = df.select(
-      col("key").cast(StringType).alias("key"),  // ✅ Mantém a key como string
+      col("key").cast(StringType).alias("key"),
       to_json(struct(
         col("fare_amount").cast(DoubleType).alias("fare_amount"),
         col("pickup_datetime").cast(TimestampType).alias("pickup_datetime"),
@@ -58,22 +54,21 @@ object ProducerJob {
         col("dropoff_longitude").cast(DoubleType).alias("dropoff_longitude"),
         col("dropoff_latitude").cast(DoubleType).alias("dropoff_latitude"),
         col("passenger_count").cast(IntegerType).alias("passenger_count")
-      )).alias("value") // ✅ O JSON vai como value no Kafka
+      )).alias("value")
     )
 
-
-    val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(0.01)) // 10 chunks
+    val chunkedDFs = kafkaMessages.randomSplit(Array.fill(10)(0.01))
 
     chunkedDFs.foreach { chunk =>
       if (!chunk.isEmpty) {
-        chunk.selectExpr("CAST(key AS STRING)", "value") // ✅ Explicita a key antes de salvar
+        chunk.selectExpr("CAST(key AS STRING)", "value")
           .write
           .format("kafka")
           .option("kafka.bootstrap.servers", kafkaBroker)
           .option("topic", "nyc-taxi-rides")
           .save()
 
-        Thread.sleep(10000) // Simula delay entre os batches
+        Thread.sleep(10000)
       }
     }
 

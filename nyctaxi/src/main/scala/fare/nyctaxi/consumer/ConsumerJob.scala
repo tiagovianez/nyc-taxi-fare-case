@@ -25,7 +25,6 @@ object ConsumerJob {
 
     import spark.implicits._
 
-    // 🔥 Leitura dos dados do Kafka
     val rawKafkaDF = spark
       .readStream
       .format("kafka")
@@ -35,7 +34,6 @@ object ConsumerJob {
       .option("failOnDataLoss", "false")
       .load()
 
-    // 📌 Conversão de JSON para DataFrame
     val parsedDF = rawKafkaDF
       .selectExpr(
         "CAST(key AS STRING) as key",
@@ -43,8 +41,8 @@ object ConsumerJob {
       )
       .select(from_json($"json_value", Constants.rawSchema).as("data"), $"key")
       .select("key", "data.*")
-      .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampNTZType)) // 🔥 Conversão otimizada
-      .withColumn("year", year($"pickup_datetime").cast(ShortType))  // 🔥 Reduz de Int para Short
+      .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampNTZType))
+      .withColumn("year", year($"pickup_datetime").cast(ShortType))
       .withColumn("month", month($"pickup_datetime").cast(ByteType))
       .withColumn("day", dayofmonth($"pickup_datetime").cast(ByteType))
 
@@ -53,17 +51,12 @@ object ConsumerJob {
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
         val batchCount = batchDF.count()
 
-        println(s"\n📌 [INFO] - Batch ID: $batchId | Registros processados: $batchCount")
-        println(s"📀 [INFO] - Iniciando escrita no Delta Lake (Raw Layer)...")
-
         batchDF
           .write
           .format("delta")
           .mode("append")
           .partitionBy("year", "month", "day")
           .save(Constants.RAW_DELTA_PATH)
-
-        println(s"✅ [SUCESSO] - Batch $batchId armazenado com sucesso no Delta Lake!")
       }
       .option("checkpointLocation", Constants.CHECKPOINTS_PATH)
       .start()

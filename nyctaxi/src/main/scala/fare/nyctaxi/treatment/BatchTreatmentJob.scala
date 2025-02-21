@@ -18,7 +18,7 @@ object BatchTreatmentJob {
     Logger.getLogger("akka").setLevel(Level.ERROR)
     Logger.getLogger("io.delta").setLevel(Level.WARN)
 
-    // 🚀 Inicializa a sessão do Spark
+
     val spark = SparkSession.builder()
       .appName("BatchTransformationJob")
       .config("spark.master", "local[*]")
@@ -38,14 +38,11 @@ object BatchTreatmentJob {
 
     val startTime = System.currentTimeMillis()
 
-    println("\n📌 [INFO] - Lendo os dados da camada RAW...")
     val rawDF = spark.read
       .format("delta")
       .load(Constants.RAW_DELTA_PATH)
       .cache()
 
-
-    println("\n📌 [INFO] - Lendo os bairros de referência...")
     val neighborhoodDF = spark.read
       .option("header", "true")
       .schema(Constants.neighborhoodSchema)
@@ -91,7 +88,6 @@ object BatchTreatmentJob {
         Seq("pickup_cluster"), "left")
       .drop("pickup_cluster")
 
-    // ✅ Limpando os dados
     val cleanedDF = rawDF
       .join(finalDF.select("key", "pickup_region"), Seq("key"), "left")
       .withColumnRenamed("neighborhood", "pickup_region")
@@ -108,20 +104,13 @@ object BatchTreatmentJob {
       .dropDuplicates()
 
 
-
-    println("\n📌 [INFO] - Escrevendo os dados na camada CURADA (Parquet)...")
     cleanedDF
-      .coalesce(16)  // 🔥 Reduz o shuffle e melhora escrita
+      .coalesce(16)
       .write
       .format("delta")
       .mode("append")
       .partitionBy("year", "month", "day", "pickup_region")
       .save(Constants.CURATED_PARQUET_PATH)
-
-    println("\n✅ [SUCESSO] - Dados armazenados na camada CURADA com sucesso!")
-
-    val totalTime = (System.currentTimeMillis() - startTime) / 1000
-    println(s"\n🚀 Tempo total de processamento: $totalTime segundos")
 
     spark.stop()
   }
