@@ -10,7 +10,7 @@ import org.apache.log4j.{Level, Logger}
 import fare.nyctaxi.Constants
 
 
-object BatchTreatmentJob {
+object TreatmentJob {
   def main(args: Array[String]): Unit = {
 
     System.setProperty("log4j.configuration", Constants.log4jConfigPath)
@@ -25,30 +25,31 @@ object BatchTreatmentJob {
       .config("spark.master", "local[*]")
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-      .config("spark.executor.memory", "5g")
-      .config("spark.driver.memory", "5g")
-      .config("spark.sql.shuffle.partitions", "32")
-      .config("spark.default.parallelism", "32")
+      .config("spark.executor.memory", "8g")
+      .config("spark.driver.memory", "8g")
+      .config("spark.sql.shuffle.partitions", "16")
+      .config("spark.default.parallelism", "16")
       .config("spark.sql.files.maxPartitionBytes", "64MB")
       .config("spark.sql.adaptive.enabled", "true")
       .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
       .config("spark.sql.adaptive.coalescePartitions.minPartitionSize", "64MB")
+      .config("spark.sql.streaming.checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH)
       .getOrCreate()
 
     import spark.implicits._
 
     val startTime = System.currentTimeMillis()
 
-    val rawDF = spark.read
+    val rawDF = spark.readStream
       .format("delta")
       .load(Constants.RAW_DELTA_PATH)
-      .cache()
+      .filter(col("pickup_latitude").isNotNull && col("pickup_longitude").isNotNull)
+      .withWatermark("pickup_datetime", "10 minutes")
 
     val neighborhoodDF = spark.read
       .option("header", "true")
       .schema(Constants.neighborhoodSchema)
       .csv(Constants.NEIGHBORHOOD_PATH)
-      .cache()
 
 
     val vectorAssembler = new VectorAssembler()
@@ -73,6 +74,7 @@ object BatchTreatmentJob {
     val pickupFeaturesDF = new VectorAssembler()
       .setInputCols(Array("pickup_latitude", "pickup_longitude"))
       .setOutputCol("features")
+      .setHandleInvalid("skip")
       .transform(rawDF)
 
     val pickupClusters = model.transform(pickupFeaturesDF)
@@ -80,17 +82,36 @@ object BatchTreatmentJob {
         col("key"),
         col("pickup_latitude"),
         col("pickup_longitude"),
+        col("pickup_datetime"),
         col("cluster").alias("pickup_cluster")
       )
 
     val finalDF = pickupClusters
-      .join(clusteredNeighborhoods.withColumnRenamed("cluster", "pickup_cluster")
-        .withColumnRenamed("neighborhood", "pickup_region"),
-        Seq("pickup_cluster"), "left")
+      .join(
+        clusteredNeighborhoods
+          .withColumnRenamed("cluster", "pickup_cluster")
+          .withColumnRenamed("neighborhood", "pickup_region"),
+        Seq("pickup_cluster"),
+        "left"
+      )
       .drop("pickup_cluster")
 
     val cleanedDF = rawDF
-      .join(finalDF.select("key", "pickup_region"), Seq("key"), "left")
+      .drop("pickup_region")
+      .alias("raw")
+      .join(
+        finalDF
+          .withWatermark("pickup_datetime", "10 minutes")
+          .selectExpr("key as final_key", "pickup_region", "pickup_datetime as final_pickup_datetime") // Renomeia a coluna para evitar ambiguidade
+          .alias("final"),
+        expr("""
+      raw.key = final.final_key AND
+      raw.pickup_datetime BETWEEN final.final_pickup_datetime - INTERVAL 10 MINUTES
+                              AND final.final_pickup_datetime + INTERVAL 10 MINUTES
+    """),
+        "left"
+      )
+      .drop("final_key", "final_pickup_datetime")
       .withColumnRenamed("neighborhood", "pickup_region")
       .withColumn("fare_amount", col("fare_amount").cast(FloatType))
       .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampNTZType))
@@ -105,14 +126,16 @@ object BatchTreatmentJob {
       .dropDuplicates()
 
 
-    cleanedDF
-      .coalesce(16)
-      .write
-      .format("delta")
-      .mode("append")
-      .partitionBy("year", "month", "day", "pickup_region")
-      .save(Constants.CURATED_PARQUET_PATH)
+    val cleanedDFCheckpointed = cleanedDF.checkpoint()
 
-    spark.stop()
+    cleanedDFCheckpointed
+      .writeStream
+      .format("parquet")
+      .option("maxRecordsPerFile", "300000")
+      .outputMode("append")
+      .option("checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH)
+      .partitionBy("year", "month", "day", "pickup_region")
+      .start(Constants.CURATED_PARQUET_PATH)
+      .awaitTermination()
   }
 }
