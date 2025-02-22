@@ -23,34 +23,23 @@ object ProducerJob {
       .master("local[3]")
       .getOrCreate()
 
-    import spark.implicits._
-
-    val taxiSchema = StructType(Array(
-      StructField("key", StringType, nullable = true),
-      StructField("fare_amount", DoubleType, nullable = true),
-      StructField("pickup_datetime", TimestampType, nullable = true),
-      StructField("pickup_longitude", DoubleType, nullable = true),
-      StructField("pickup_latitude", DoubleType, nullable = true),
-      StructField("dropoff_longitude", DoubleType, nullable = true),
-      StructField("dropoff_latitude", DoubleType, nullable = true),
-      StructField("passenger_count", IntegerType, nullable = true)
-    ))
+//    import spark.implicits._
 
     val df = spark.read
       .option("header", "true")
-      .schema(taxiSchema)
+      .schema(Constants.taxiSchema)
       .csv(Constants.SOURCE_DATA_PATH)
 
     val kafkaMessages = df.select(
       col("key").cast(StringType).alias("key"),
       to_json(struct(
-        col("fare_amount").cast(DoubleType).alias("fare_amount"),
-        col("pickup_datetime").cast(TimestampType).alias("pickup_datetime"),
-        col("pickup_longitude").cast(DoubleType).alias("pickup_longitude"),
-        col("pickup_latitude").cast(DoubleType).alias("pickup_latitude"),
-        col("dropoff_longitude").cast(DoubleType).alias("dropoff_longitude"),
-        col("dropoff_latitude").cast(DoubleType).alias("dropoff_latitude"),
-        col("passenger_count").cast(IntegerType).alias("passenger_count")
+        col("fare_amount").cast(FloatType).alias("fare_amount"),
+        col("pickup_datetime").cast(TimestampNTZType).alias("pickup_datetime"),
+        col("pickup_longitude").cast(DecimalType(8,6)).alias("pickup_longitude"),
+        col("pickup_latitude").cast(DecimalType(8,6)).alias("pickup_latitude"),
+        col("dropoff_longitude").cast(DecimalType(8,6)).alias("dropoff_longitude"),
+        col("dropoff_latitude").cast(DecimalType(8,6)).alias("dropoff_latitude"),
+        col("passenger_count").cast(ByteType).alias("passenger_count")
       )).alias("value")
     )
 
@@ -61,11 +50,11 @@ object ProducerJob {
         chunk.selectExpr("CAST(key AS STRING)", "value")
           .write
           .format("kafka")
-          .option("kafka.bootstrap.servers", Constants.kafkaBroker)
-          .option("topic", Constants.kafkaTopic)
+          .option("kafka.bootstrap.servers", "localhost:9092")
+          .option("topic", "nyc-taxi-rides")
           .save()
 
-        Thread.sleep(10000)
+        Thread.sleep(1000)
       }
     }
 

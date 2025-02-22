@@ -37,12 +37,12 @@ object ConsumerJob {
 
     val parsedDF = rawKafkaDF
       .selectExpr(
-        "CAST(key AS STRING) as key",
         "CAST(value AS STRING) as json_value"
       )
-      .select(from_json($"json_value", Constants.rawSchema).as("data"), $"key")
-      .select("key", "data.*")
-      .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampNTZType))
+      .select(from_json($"json_value", Constants.rawSchema).as("data"))
+      .select("data.*")
+      .withColumn("fare_amount", col("fare_amount").cast(FloatType))
+      .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampType))
       .withColumn("year", year($"pickup_datetime").cast(ShortType))
       .withColumn("month", month($"pickup_datetime").cast(ByteType))
       .withColumn("day", dayofmonth($"pickup_datetime").cast(ByteType))
@@ -59,7 +59,7 @@ object ConsumerJob {
           .partitionBy("year", "month", "day")
           .save(Constants.RAW_DELTA_PATH)
       }
-      .option("checkpointLocation", Constants.CHECKPOINTS_PATH)
+      .option("checkpointLocation", Constants.CHECKPOINTS_RAW_PATH)
       .start()
       .awaitTermination()
   }
