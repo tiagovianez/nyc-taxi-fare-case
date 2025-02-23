@@ -1,14 +1,13 @@
-package fare.nyctaxi.batch
+package fare.nyctaxi.treatment
 
 import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.functions.broadcast
 import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
 import org.apache.log4j.{Level, Logger}
 import fare.nyctaxi.Constants
-
 
 object TreatmentJob {
   def main(args: Array[String]): Unit = {
@@ -19,7 +18,6 @@ object TreatmentJob {
     Logger.getLogger("akka").setLevel(Level.ERROR)
     Logger.getLogger("io.delta").setLevel(Level.WARN)
 
-
     val spark = SparkSession.builder()
       .appName("BatchTransformationJob")
       .config("spark.master", "local[*]")
@@ -29,16 +27,10 @@ object TreatmentJob {
       .config("spark.driver.memory", "8g")
       .config("spark.sql.shuffle.partitions", "16")
       .config("spark.default.parallelism", "16")
-      .config("spark.sql.files.maxPartitionBytes", "64MB")
-      .config("spark.sql.adaptive.enabled", "true")
-      .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
-      .config("spark.sql.adaptive.coalescePartitions.minPartitionSize", "64MB")
-      .config("spark.sql.streaming.checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH)
+      .config("spark.sql.streaming.checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH + "/treatment")
       .getOrCreate()
 
     import spark.implicits._
-
-    val startTime = System.currentTimeMillis()
 
     val rawDF = spark.readStream
       .format("delta")
@@ -46,11 +38,11 @@ object TreatmentJob {
       .filter(col("pickup_latitude").isNotNull && col("pickup_longitude").isNotNull)
       .withWatermark("pickup_datetime", "10 minutes")
 
+
     val neighborhoodDF = spark.read
       .option("header", "true")
       .schema(Constants.neighborhoodSchema)
       .csv(Constants.NEIGHBORHOOD_PATH)
-
 
     val vectorAssembler = new VectorAssembler()
       .setInputCols(Array("latitude", "longitude"))
@@ -64,8 +56,8 @@ object TreatmentJob {
       .setFeaturesCol("features")
       .setPredictionCol("cluster")
 
-    val model = kmeans.fit(featureDF)
 
+    val model = kmeans.fit(featureDF)
 
     val clusteredNeighborhoods = model.transform(featureDF)
       .select("neighborhood", "cluster")
@@ -88,7 +80,7 @@ object TreatmentJob {
 
     val finalDF = pickupClusters
       .join(
-        clusteredNeighborhoods
+        broadcast(clusteredNeighborhoods)
           .withColumnRenamed("cluster", "pickup_cluster")
           .withColumnRenamed("neighborhood", "pickup_region"),
         Seq("pickup_cluster"),
@@ -101,8 +93,7 @@ object TreatmentJob {
       .alias("raw")
       .join(
         finalDF
-          .withWatermark("pickup_datetime", "10 minutes")
-          .selectExpr("key as final_key", "pickup_region", "pickup_datetime as final_pickup_datetime") // Renomeia a coluna para evitar ambiguidade
+          .selectExpr("key as final_key", "pickup_region", "pickup_datetime as final_pickup_datetime")
           .alias("final"),
         expr("""
       raw.key = final.final_key AND
@@ -114,7 +105,7 @@ object TreatmentJob {
       .drop("final_key", "final_pickup_datetime")
       .withColumnRenamed("neighborhood", "pickup_region")
       .withColumn("fare_amount", col("fare_amount").cast(FloatType))
-      .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampNTZType))
+      .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampType))
       .withColumn("pickup_longitude", col("pickup_longitude").cast(DecimalType(8,6)))
       .withColumn("pickup_latitude", col("pickup_latitude").cast(DecimalType(8,6)))
       .withColumn("dropoff_longitude", col("dropoff_longitude").cast(DecimalType(8,6)))
@@ -126,16 +117,13 @@ object TreatmentJob {
       .dropDuplicates()
 
 
-    val cleanedDFCheckpointed = cleanedDF.checkpoint()
-
-    cleanedDFCheckpointed
+    cleanedDF
       .writeStream
-      .format("parquet")
-      .option("maxRecordsPerFile", "300000")
+      .format("delta")
       .outputMode("append")
-      .option("checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH)
+      .option("checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH + "/treatment")
       .partitionBy("year", "month", "day", "pickup_region")
-      .start(Constants.CURATED_PARQUET_PATH)
+      .start(Constants.CURATED_DELTA_PATH)
       .awaitTermination()
   }
 }
