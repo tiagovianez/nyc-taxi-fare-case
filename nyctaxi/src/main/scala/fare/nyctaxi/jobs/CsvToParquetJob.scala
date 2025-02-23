@@ -3,6 +3,7 @@ package fare.nyctaxi.jobs
 import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
+import fare.nyctaxi.Constants
 
 object CSVToParquetConverter {
   def main(args: Array[String]): Unit = {
@@ -14,7 +15,7 @@ object CSVToParquetConverter {
 
     import spark.implicits._
 
-    // 📌 Define o schema do CSV para evitar inferência automática
+
     val schema = StructType(Array(
       StructField("key", StringType, nullable = true),
       StructField("fare_amount", FloatType, nullable = true),
@@ -26,36 +27,26 @@ object CSVToParquetConverter {
       StructField("passenger_count", IntegerType, nullable = true)
     ))
 
-    // 📌 Caminho do CSV de entrada
-    val inputCsvPath = "/home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/train.csv"
-
-    // 📌 Caminho de saída para Parquet
-    val outputParquetPath = "/home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source_parquet"
-
-    // ✅ Lê o CSV
     val df = spark.read
-      .option("header", "true")       // CSV contém cabeçalho
-      .option("inferSchema", "false") // Não inferir esquema automaticamente
-      .option("delimiter", ",")       // Delimitador é vírgula
-      .schema(schema)                 // Usa o esquema definido
-      .csv(inputCsvPath)
+      .option("header", "true")
+      .option("inferSchema", "false")
+      .option("delimiter", ",")
+      .schema(schema)
+      .csv(Constants.SOURCE_CSV_PATH)
 
-    // ✅ Adiciona colunas para particionamento
+
     val dfPartitioned = df
       .withColumn("year", year($"pickup_datetime"))
       .withColumn("month", month($"pickup_datetime"))
       .withColumn("day", dayofmonth($"pickup_datetime"))
 
-    // ✅ Escreve em Parquet com particionamento
     dfPartitioned
-      .coalesce(4) // Ajusta o número de arquivos
+      .coalesce(4)
       .write
-      .mode("overwrite") // Sobrescreve se já existir
+      .mode("overwrite")
       .format("parquet")
-      .partitionBy("year", "month", "day") // Particiona os dados
-      .save(outputParquetPath)
-
-    println(s"✅ Conversão concluída! Arquivos Parquet salvos em: $outputParquetPath")
+      .partitionBy("year", "month", "day")
+      .save(Constants.SOURCE_PARQUET_PATH)
 
     spark.stop()
   }
