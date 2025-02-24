@@ -30,4 +30,5 @@ USER airflow
 
 # Remover versão antiga do OpenLineage antes de instalar a correta
 RUN pip uninstall -y apache-airflow-providers-openlineage && \
+    pip install apache-airflow-providers-apache-spark && \
     pip install --no-cache-dir apache-airflow-providers-openlineage>=1.8.0

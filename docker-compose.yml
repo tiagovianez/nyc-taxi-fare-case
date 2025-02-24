@@ -25,6 +25,7 @@ x-airflow-common: &airflow-common
     - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/checkpoints_raw:/opt/airflow/data-lake/checkpoints_raw
     - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/data-lake/curated:/opt/airflow/data-lake/curated
     - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/checkpoints_curated:/opt/airflow/data-lake/checkpoints_curated
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/intermediate_parquet:/opt/airflow/data-lake/intermediate_parquet
     - type: bind
       source: /home/tiagovianez/projects/nyc-taxi-fare-case/nyctaxi/target/scala-2.12/nycTaxi-assembly-0.0.1.jar
       target: /opt/airflow/jobs/nycTaxi-assembly-0.0.1.jar
@@ -36,7 +37,6 @@ x-airflow-common: &airflow-common
 
 services:
   spark-master:
-    container_name: spark-master
     <<: *spark-common
     command: bin/spark-class org.apache.spark.deploy.master.Master
     ports:
@@ -44,7 +44,6 @@ services:
       - "7077:7077"
 
   spark-worker:
-    container_name: spark-worker
     <<: *spark-common
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
@@ -56,7 +55,6 @@ services:
       SPARK_MASTER_URL: spark://spark-master:7077
 
   postgres:
-    container_name: postgres
     image: postgres:14.0
     environment:
       - POSTGRES_USER=airflow
@@ -66,7 +64,6 @@ services:
       - code-with-yu
 
   webserver:
-    container_name: webserver
     <<: *airflow-common
     environment:
       - CSV_PATH=${CSV_PATH}
@@ -81,7 +78,6 @@ services:
 
 
   scheduler:
-    container_name: scheduler
     <<: *airflow-common
     environment:
       - CSV_PATH=${CSV_PATH}
@@ -96,7 +92,6 @@ services:
 
   zookeeper:
     image: bitnami/zookeeper:3.8
-    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
@@ -104,7 +99,6 @@ services:
 
   kafka:
     image: bitnami/kafka:3.4.0
-    container_name: kafka
     depends_on:
       - zookeeper
     ports:
