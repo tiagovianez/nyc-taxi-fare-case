@@ -25,7 +25,6 @@ x-airflow-common: &airflow-common
     - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/checkpoints_raw:/opt/airflow/data-lake/checkpoints_raw
     - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/data-lake/curated:/opt/airflow/data-lake/curated
     - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/checkpoints_curated:/opt/airflow/data-lake/checkpoints_curated
-    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/intermediate_parquet:/opt/airflow/data-lake/intermediate_parquet
     - type: bind
       source: /home/tiagovianez/projects/nyc-taxi-fare-case/nyctaxi/target/scala-2.12/nycTaxi-assembly-0.0.1.jar
       target: /opt/airflow/jobs/nycTaxi-assembly-0.0.1.jar
@@ -88,7 +87,7 @@ services:
         airflow db migrate &&
         airflow users create --username admin --firstname Tiago --lastname Vianez --role Admin --email airscholar@gmail.com --password admin &&
         airflow scheduler"
-      
+  
 
   zookeeper:
     image: bitnami/zookeeper:3.8
