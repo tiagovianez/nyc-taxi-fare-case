@@ -4,7 +4,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.types._
 
 object Constants {
-  private val config: Config = ConfigFactory.load("NycTaxiFare.conf") // Carrega o arquivo de configuração
+  private val config: Config = ConfigFactory.parseFile(new java.io.File("/opt/airflow/config/NycTaxiFare.conf"))
 
   val SOURCE_CSV_PATH: String = config.getString("Sources.inputCsvData")
   val SOURCE_PARQUET_PATH: String = config.getString("Sources.inputParquetData")
