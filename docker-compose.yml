@@ -17,6 +17,18 @@ x-airflow-common: &airflow-common
     - ./jobs:/opt/airflow/jobs
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
+    - /home/tiagovianez/projects/nyc-taxi-fare-case/nyctaxi/src/main/resources/NycTaxiFare.conf:/opt/airflow/config/NycTaxiFare.conf
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/train.csv:/opt/airflow/source_data/source/train.csv
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source_parquet:/opt/airflow/source_data/source_parquet
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/source/nyc_neighborhoods.csv:/opt/airflow/source_data/source/nyc_neighborhoods.csv
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/data-lake/raw:/opt/airflow/data-lake/raw
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/checkpoints_raw:/opt/airflow/data-lake/checkpoints_raw
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/data-lake/curated:/opt/airflow/data-lake/curated
+    - /home/tiagovianez/projects/nyc-taxi-fare-case-source-data-lake/checkpoints_curated:/opt/airflow/data-lake/checkpoints_curated
+    - type: bind
+      source: /home/tiagovianez/projects/nyc-taxi-fare-case/nyctaxi/target/scala-2.12/nycTaxi-assembly-0.0.1.jar
+      target: /opt/airflow/jobs/nycTaxi-assembly-0.0.1.jar
+
   depends_on:
     - postgres
   networks:
@@ -56,6 +68,10 @@ services:
   webserver:
     container_name: webserver
     <<: *airflow-common
+    environment:
+      - CSV_PATH=${CSV_PATH}
+      - PARQUET_PATH=${PARQUET_PATH}
+      - NEIGHBORHOOD_PATH=${NEIGHBORHOOD_PATH}
     command: >
       bash -c "airflow db init && airflow webserver"
     ports:
@@ -63,14 +79,20 @@ services:
     depends_on:
       - scheduler
 
+
   scheduler:
     container_name: scheduler
     <<: *airflow-common
+    environment:
+      - CSV_PATH=${CSV_PATH}
+      - PARQUET_PATH=${PARQUET_PATH}
+      - NEIGHBORHOOD_PATH=${NEIGHBORHOOD_PATH}
     command: >
       bash -c "
         airflow db migrate &&
         airflow users create --username admin --firstname Tiago --lastname Vianez --role Admin --email airscholar@gmail.com --password admin &&
         airflow scheduler"
+      
 
   zookeeper:
     image: bitnami/zookeeper:3.8
