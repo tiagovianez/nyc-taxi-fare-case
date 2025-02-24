@@ -1,7 +1,6 @@
 // Definições de versão do Spark, Delta e Hadoop
 val sparkVersion = "3.4.0"
 val deltaVersion = "2.4.0"
-val hadoopVersion = "3.3.4"
 
 lazy val root = (project in file("."))
   .settings(
@@ -29,8 +28,6 @@ lazy val root = (project in file("."))
       "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion,
       "io.delta" %% "delta-core" % deltaVersion,
-      "org.apache.hadoop" % "hadoop-aws" % hadoopVersion,
-      "com.amazonaws" % "aws-java-sdk-bundle" % "1.12.262",
       "org.scalatest" %% "scalatest" % "3.2.10" % "test",
       "org.scalactic" %% "scalactic" % "3.2.10" % "test",
       "org.scalacheck" %% "scalacheck" % "1.15.2" % "test",
@@ -41,7 +38,6 @@ lazy val root = (project in file("."))
       "org.apache.spark" %% "spark-mllib" % sparkVersion,
       "com.typesafe" % "config" % "1.4.2",
       "com.github.scopt" %% "scopt" % "4.0.1"
-
     ),
 
     // Configuração para rodar testes no IntelliJ
@@ -72,23 +68,26 @@ lazy val root = (project in file("."))
 
     // Configuração do Assembly
     assembly / mainClass := Some("fare.nyctaxi.jobs.MainScript"), // Define a classe principal
-    assembly / assemblyJarName := "nycTaxi-assembly-0.0.1.jar", // Nome do JAR gerado
-    assembly / test := {}, // Evita rodar testes ao montar o JAR
+    assembly / assemblyJarName := "nycTaxi-assembly-0.0.1.jar",
+    assembly / test := {},
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
-      case "META-INF/versions/9/module-info.class" => MergeStrategy.discard
+//      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+//      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
+//      case "META-INF/versions/9/module-info.class" => MergeStrategy.discard
       case "META-INF/services/org.apache.hadoop.fs.FileSystem" => MergeStrategy.concat
       case "META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat" => MergeStrategy.first
       case "module-info.class" => MergeStrategy.discard
-      case "arrow-git.properties" => MergeStrategy.first
-      case PathList("google", "protobuf", _*) => MergeStrategy.first
+//      case "arrow-git.properties" => MergeStrategy.first
+      case PathList("META-INF", _*) => MergeStrategy.discard
+//      case PathList("google", "protobuf", _*) => MergeStrategy.first
       case PathList("org", "apache", "commons", "logging", _*) => MergeStrategy.first
       case PathList("org", "slf4j", _*) => MergeStrategy.first
       case PathList("javax", "xml", "bind", _*) => MergeStrategy.first
-      case PathList("com", "fasterxml", "jackson", "core", _*) => MergeStrategy.first
-      case PathList("org", "apache", "arrow", _*) => MergeStrategy.first
-      case PathList("org", "apache", "spark", _*) => MergeStrategy.first
+//      case PathList("com", "fasterxml", "jackson", "core", _*) => MergeStrategy.first
+//      case PathList("org", "apache", "arrow", _*) => MergeStrategy.first
+//      case PathList("org", "apache", "spark", _*) => MergeStrategy.first
+      case PathList("com", "github", "scopt", _*) => MergeStrategy.first
+      case PathList("com", "typesafe", "config", _*) => MergeStrategy.first
       case _ => MergeStrategy.first
     }
   )
