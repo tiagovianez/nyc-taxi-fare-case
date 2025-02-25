@@ -50,7 +50,6 @@ object ConsumerJob {
     parsedDF
       .writeStream
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-        val batchCount = batchDF.count()
 
         batchDF
           .write
