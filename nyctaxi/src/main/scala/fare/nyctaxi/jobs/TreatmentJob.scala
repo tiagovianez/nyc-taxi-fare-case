@@ -116,6 +116,13 @@ object TreatmentJob {
       .withColumn("day", col("day").cast(ByteType))
       .dropDuplicates()
 
+    // Creating table schema if not defined
+    val emptyDF = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], Constants.rawSchema)
+
+    emptyDF.write
+      .format("delta")
+      .mode("ignore")
+      .save(Constants.CURATED_DELTA_PATH)
 
     cleanedDF
       .writeStream
