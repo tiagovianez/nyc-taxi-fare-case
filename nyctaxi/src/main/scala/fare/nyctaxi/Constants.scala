@@ -4,10 +4,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.types._
 
 object Constants {
-  private val config: Config = ConfigFactory.parseFile(new java.io.File("/opt/airflow/config/NycTaxiFare.conf"))
+  private val config: Config = ConfigFactory.parseFile(new java.io.File("/home/tiagovianez/projects/nyc-taxi-fare-case/nyctaxi/src/main/resources/NycTaxiFare.conf"))
 
   val SOURCE_CSV_PATH: String = config.getString("Sources.inputCsvData")
-  val SOURCE_PARQUET_PATH: String = config.getString("Sources.inputParquetData")
   val NEIGHBORHOOD_PATH: String = config.getString("Sources.neighborhoodPath")
 
   val RAW_DELTA_PATH: String = config.getString("RawDelta.path")
