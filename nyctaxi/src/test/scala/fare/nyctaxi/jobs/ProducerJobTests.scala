@@ -1,4 +1,4 @@
-package fare.nyctaxi.producer
+package fare.nyctaxi.jobs
 
 import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.functions._
@@ -7,7 +7,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class ProducerJobTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
+class ProducerJobTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   lazy val spark: SparkSession = SparkSession.builder()
     .appName("Test - NYC Taxi Rides Kafka Producer")
@@ -35,16 +35,16 @@ class ProducerJobTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     val localSpark = spark
     import org.apache.spark.sql.Row
 
-    // Criando dados como `Row`, garantindo compatibilidade com o schema
+
     val data = Seq(
       Row("1", 12.5, java.sql.Timestamp.valueOf("2024-02-21 10:30:00"), -73.987, 40.743, -73.985, 40.745, 2),
       Row("2", 25.0, java.sql.Timestamp.valueOf("2024-02-21 11:00:00"), -73.982, 40.750, -73.980, 40.752, 1)
     )
 
-    // Criando o DataFrame com o schema definido
+
     val df = localSpark.createDataFrame(localSpark.sparkContext.parallelize(data), taxiSchema)
 
-    // Verificações do schema e da contagem de registros
+
     df.schema shouldBe taxiSchema
     df.count() shouldBe 2
   }
