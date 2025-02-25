@@ -1,4 +1,4 @@
-package fare.nyctaxi.treatment
+package fare.nyctaxi.jobs
 
 import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.functions._
