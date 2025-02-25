@@ -1,0 +1,25 @@
+FROM apache/airflow:2.7.1-python3.11
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y gcc python3-dev openjdk-11-jdk curl && \
+    apt-get clean
+
+
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+# Garantir que Airflow continue funcionando normalmente
+USER airflow
+
+
+COPY requirements_airflow.txt /opt/airflow/requirements_airflow.txt
+
+# Remover versão antiga do OpenLineage antes de instalar a correta
+RUN pip uninstall -y apache-airflow-providers-openlineage && \
+    pip install --no-cache-dir apache-airflow-providers-apache-spark && \
+    pip install --no-cache-dir "apache-airflow-providers-openlineage>=1.8.0" && \
+    RUN pip install --no-cache-dir apache-airflow-providers-apache-kafka && \
+    pip install --no-cache-dir -r /opt/airflow/requirements_airflow.txt
+
