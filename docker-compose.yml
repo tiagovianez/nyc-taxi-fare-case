@@ -21,7 +21,6 @@ x-airflow-common: &airflow-common
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./requirements_airflow.txt:/opt/airflow/requirements_airflow.txt
-    - /var/run/docker.sock:/var/run/docker.sock
   depends_on:
     - postgres
   networks:

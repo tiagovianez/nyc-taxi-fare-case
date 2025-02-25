@@ -8,21 +8,23 @@ from dotenv import load_dotenv
 from datetime import timedelta
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from kafka.admin import KafkaAdminClient, NewTopic
+from airflow.hooks.base import BaseHook
+
 
 
 load_dotenv()
 
 def check_csv_exists():
     if CSV_PATH is None:
-        raise ValueError("CSV_PATH está indefinido. Verifique o arquivo airflow.env e a configuração do Docker.")
+        raise ValueError("CSV_PATH esta indefinido. Verifique o arquivo airflow.env e a configuração do docker.")
 
     if not os.path.exists(CSV_PATH):
         raise FileNotFoundError(f"Arquivo {CSV_PATH} não encontrado dentro do container!")
 
-    print(f"Arquivo {CSV_PATH} encontrado dentro do container. Continuando DAG...")
+    print(f"arquivo {CSV_PATH} encontrado dentro do container. continuando DAG...")
 
 def create_kafka_topic_func():
-    admin_client = KafkaAdminClient(bootstrap_servers="kafka:9092")
+    admin_client = KafkaAdminClient(bootstrap_servers="nyc-taxi-fare-case-kafka-1:9092")
     topic_name = "nyc-taxi-rides"
     topic_list = [NewTopic(name=topic_name, num_partitions=3, replication_factor=1)]
 
@@ -35,7 +37,7 @@ def create_kafka_topic_func():
 
 
 def validate_kafka_topic():
-    admin_client = KafkaAdminClient(bootstrap_servers="kafka:9092")
+    admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
     topics = admin_client.list_topics()
     if "nyc-taxi-rides" in topics:
         return True

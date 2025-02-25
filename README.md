@@ -10,7 +10,7 @@ Este projeto tem como objetivo construir um pipeline de dados em tempo real (*Ne
 
 Abaixo está o fluxo do projeto:
 
-![](/home/tiagovianez/projects/nyc-taxi-fare-case/docs/architecture.png)
+![](docs/architecture.png)
 
 1. **ProducerJob**: Envia eventos do arquivo `train.csv` para um tópico Kafka.
 2. **ConsumerJob**: Consome eventos do Kafka, aplica transformações e escreve na camada **RAW**.
