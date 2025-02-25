@@ -122,8 +122,9 @@ object TreatmentJob {
       .format("delta")
       .outputMode("append")
       .option("checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH + "/treatment")
-      .partitionBy("year", "month", "day", "pickup_region")
-      .start(Constants.CURATED_DELTA_PATH)
+      .option("path", Constants.CURATED_DELTA_PATH)
+      .option("mergeSchema", "true")
+      .start()
       .awaitTermination()
   }
 }
