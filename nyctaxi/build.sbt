@@ -16,9 +16,9 @@ lazy val root = (project in file("."))
     javaOptions ++= Seq("-Xms512M", "-Xmx2048M"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
 
-    // Configuração específica para testes
-    Test / parallelExecution := false, // Evita problemas com concorrência
-    Test / fork := true, // Roda testes em um processo separado
+
+    Test / parallelExecution := false,
+    Test / fork := true,
 
     coverageHighlighting := true,
 
@@ -33,17 +33,15 @@ lazy val root = (project in file("."))
       "org.scalacheck" %% "scalacheck" % "1.15.2" % "test",
       "org.scalatest" %% "scalatest-flatspec" % "3.2.10" % "test",
       "org.scalatest" %% "scalatest-shouldmatchers" % "3.2.10" % "test",
-      "com.holdenkarau" %% "spark-testing-base" % "3.4.0_1.4.2" % "test", // Atualizei a versão do Spark Testing Base
+      "com.holdenkarau" %% "spark-testing-base" % "3.4.0_1.4.2" % "test",
       "io.github.cdimascio" % "java-dotenv" % "5.2.2",
       "org.apache.spark" %% "spark-mllib" % sparkVersion,
       "com.typesafe" % "config" % "1.4.2",
       "com.github.scopt" %% "scopt" % "4.0.1"
     ),
 
-    // Configuração para rodar testes no IntelliJ
     testFrameworks += new TestFramework("org.scalatest.tools.Framework"),
 
-    // Define como o sbt executará a aplicação
     Compile / run := Defaults.runTask(
       Compile / fullClasspath, Compile / run / mainClass, Compile / run / runner
     ).evaluated,
@@ -57,7 +55,6 @@ lazy val root = (project in file("."))
 
     pomIncludeRepository := { _ => false },
 
-    // Configuração de publicação
     publishTo := {
       val nexus = "https://oss.sonatype.org/"
       if (isSnapshot.value)
@@ -66,26 +63,17 @@ lazy val root = (project in file("."))
         Some("releases"  at nexus + "service/local/staging/deploy/maven2")
     },
 
-    // Configuração do Assembly
     assembly / mainClass := Some("fare.nyctaxi.jobs.MainScript"), // Define a classe principal
     assembly / assemblyJarName := "nycTaxi-assembly-0.0.1.jar",
     assembly / test := {},
     assembly / assemblyMergeStrategy := {
-//      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-//      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
-//      case "META-INF/versions/9/module-info.class" => MergeStrategy.discard
       case "META-INF/services/org.apache.hadoop.fs.FileSystem" => MergeStrategy.concat
       case "META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat" => MergeStrategy.first
       case "module-info.class" => MergeStrategy.discard
-//      case "arrow-git.properties" => MergeStrategy.first
       case PathList("META-INF", _*) => MergeStrategy.discard
-//      case PathList("google", "protobuf", _*) => MergeStrategy.first
       case PathList("org", "apache", "commons", "logging", _*) => MergeStrategy.first
       case PathList("org", "slf4j", _*) => MergeStrategy.first
       case PathList("javax", "xml", "bind", _*) => MergeStrategy.first
-//      case PathList("com", "fasterxml", "jackson", "core", _*) => MergeStrategy.first
-//      case PathList("org", "apache", "arrow", _*) => MergeStrategy.first
-//      case PathList("org", "apache", "spark", _*) => MergeStrategy.first
       case PathList("com", "github", "scopt", _*) => MergeStrategy.first
       case PathList("com", "typesafe", "config", _*) => MergeStrategy.first
       case _ => MergeStrategy.first
