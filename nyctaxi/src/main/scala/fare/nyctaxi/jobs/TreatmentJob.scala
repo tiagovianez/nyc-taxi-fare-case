@@ -8,6 +8,9 @@ import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.types._
 import org.apache.log4j.{Level, Logger}
 import fare.nyctaxi.Constants
+import org.apache.spark.sql.Row
+import io.delta.tables._
+
 
 object TreatmentJob {
   def main(args: Array[String]): Unit = {
