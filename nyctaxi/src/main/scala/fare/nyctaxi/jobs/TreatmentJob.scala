@@ -125,6 +125,7 @@ object TreatmentJob {
     emptyDF.write
       .format("delta")
       .mode("ignore")
+      .option("mergeSchema", "true")
       .save(Constants.CURATED_DELTA_PATH)
 
     cleanedDF
