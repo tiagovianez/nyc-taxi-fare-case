@@ -37,6 +37,7 @@ object ConsumerJob {
 
     val parsedDF = rawKafkaDF
       .selectExpr(
+        "CAST(key AS STRING) as kafka_key",
         "CAST(value AS STRING) as json_value"
       )
       .withColumn("data", from_json($"json_value", Constants.rawSchema))
