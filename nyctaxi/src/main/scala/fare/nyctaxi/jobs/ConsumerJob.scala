@@ -51,7 +51,6 @@ object ConsumerJob {
     parsedDF
       .writeStream
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-
         batchDF
           .write
           .format("delta")

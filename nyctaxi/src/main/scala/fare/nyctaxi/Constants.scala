@@ -34,7 +34,6 @@ object Constants {
   ))
 
   val rawSchema = StructType(Array(
-    StructField("key", StringType, nullable = false),
     StructField("fare_amount", FloatType, nullable = true),
     StructField("pickup_datetime", TimestampType, nullable = true),
     StructField("pickup_longitude", DoubleType, nullable = true),
@@ -45,7 +44,6 @@ object Constants {
     StructField("year", ShortType, nullable = true),
     StructField("month", ByteType, nullable = true),
     StructField("day", ByteType, nullable = true),
-    StructField("pickup_region", StringType, nullable = true)
   ))
 
   val neighborhoodSchema = StructType(Array(

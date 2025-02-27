@@ -2,6 +2,7 @@ package fare.nyctaxi.jobs
 
 import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.broadcast
 import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.ml.feature.VectorAssembler
@@ -22,25 +23,25 @@ object TreatmentJob {
     Logger.getLogger("io.delta").setLevel(Level.WARN)
 
     val spark = SparkSession.builder()
-      .appName("BatchTransformationJob")
+      .appName("TreatmentJob")
       .config("spark.master", "local[*]")
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-      .config("spark.executor.memory", "8g")
-      .config("spark.driver.memory", "8g")
-      .config("spark.sql.shuffle.partitions", "16")
-      .config("spark.default.parallelism", "16")
+      .config("spark.executor.memory", "5g")
+      .config("spark.driver.memory", "5g")
+      .config("spark.sql.shuffle.partitions", "8")
+      .config("spark.default.parallelism", "8")
       .config("spark.sql.streaming.checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH + "/treatment")
       .getOrCreate()
 
     import spark.implicits._
 
-    val rawDF = spark.readStream
+    val rawDF = spark.read
       .format("delta")
       .load(Constants.RAW_DELTA_PATH)
       .filter(col("pickup_latitude").isNotNull && col("pickup_longitude").isNotNull)
       .withWatermark("pickup_datetime", "10 minutes")
-
+      .limit(1000)
 
     val neighborhoodDF = spark.read
       .option("header", "true")
@@ -119,21 +120,13 @@ object TreatmentJob {
       .withColumn("day", col("day").cast(ByteType))
       .dropDuplicates()
 
-    // Creating table schema if not defined
-    val emptyDF = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], Constants.rawSchema)
-
-    emptyDF.write
-      .format("delta")
-      .mode("ignore")
-      .option("mergeSchema", "true")
-      .save(Constants.CURATED_DELTA_PATH)
-
     cleanedDF
       .writeStream
       .format("delta")
       .outputMode("append")
       .option("checkpointLocation", Constants.CHECKPOINTS_CURATED_PATH + "/treatment")
       .option("path", Constants.CURATED_DELTA_PATH)
+      .partitionBy("year", "month", "day", "pickup_region")
       .option("mergeSchema", "true")
       .start()
       .awaitTermination()

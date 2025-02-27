@@ -60,7 +60,7 @@ object ProducerJob {
 
     chunkedDFs.foreach { chunk =>
       if (!chunk.isEmpty) {
-        chunk.selectExpr("CAST(key AS STRING)", "value")
+        chunk.select("key", "value")
           .write
           .format("kafka")
           .option("kafka.bootstrap.servers", Constants.kafkaBroker)
