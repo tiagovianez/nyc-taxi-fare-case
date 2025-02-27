@@ -37,10 +37,11 @@ object ConsumerJob {
 
     val parsedDF = rawKafkaDF
       .selectExpr(
+        "CAST(key AS STRING) as kafka_key",
         "CAST(value AS STRING) as json_value"
       )
-      .select(from_json($"json_value", Constants.rawSchema).as("data"))
-      .select("data.*")
+      .withColumn("data", from_json($"json_value", Constants.rawSchema))
+      .select($"kafka_key".alias("key"), $"data.*")
       .withColumn("fare_amount", col("fare_amount").cast(FloatType))
       .withColumn("pickup_datetime", col("pickup_datetime").cast(TimestampType))
       .withColumn("year", year($"pickup_datetime").cast(ShortType))
@@ -50,8 +51,6 @@ object ConsumerJob {
     parsedDF
       .writeStream
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-        val batchCount = batchDF.count()
-
         batchDF
           .write
           .format("delta")
