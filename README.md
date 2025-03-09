@@ -1,6 +1,4 @@
 # NYC Taxi Fare Case 
-# Case de Engenharia de Dados - EITS | Data Platform | MLOps - Serasa Experian
-
 
 ## Introdução
 
